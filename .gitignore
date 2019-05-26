@@ -1,0 +1,24 @@
+# Python
+*.py[c]
+backend/migrations/
+!backend/migrations/__init__.py
+dist/
+build/
+frontend/node_modules/
+env
+.vscode
+frontend/.babelrc
+frontend/.editorconfig
+frontend/package-lock.json
+frontend/.postcssrc.js
+frontend/.eslintignore
+frontend/.eslintrc.js
+frontend/.gitignore
+frontend/static/
+frontend/test/
+db.sqlite3
+.idea/
+backend/controllers/test_book_manage.py
+frontend/build
+frontend/package.json
+frontend/package-lock.json

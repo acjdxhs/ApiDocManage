@@ -5,8 +5,11 @@ import App from './App'
 import router from './router'
 import ElementUI from 'element-ui' //引入组件库
 import 'element-ui/lib/theme-chalk/index.css' // 引入样式
+import Vuex from 'vuex'
+import store from './vuex/store'
 
 Vue.use(ElementUI)
+Vue.use(Vuex)
 Vue.config.productionTip = false
 
 /* eslint-disable no-new */
@@ -14,5 +17,6 @@ new Vue({
   el: '#app',
   router,
   components: { App },
+  store,
   template: '<App/>'
 })

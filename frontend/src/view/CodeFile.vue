@@ -1,6 +1,7 @@
 <template>
   <div>
-  <VueUeditorWrap v-model="msg" :config="myConfig"></VueUeditorWrap>
+  <VueUeditorWrap v-model="subContent" :config="myConfig"></VueUeditorWrap>
+    <el-button style="margin-top: 20px" type="primary" round>保存</el-button>
     <el-button style="margin-top: 20px" type="primary" round>To API</el-button>
   </div>
 
@@ -14,9 +15,13 @@
     components: {
       VueUeditorWrap
     },
+    props: {
+      content: {
+        type: String
+      }},
     data() {
       return {
-        msg: '',
+        subContent: this.content,
         myConfig: {
           // 编辑器不自动被内容撑高
           autoHeightEnabled: false,

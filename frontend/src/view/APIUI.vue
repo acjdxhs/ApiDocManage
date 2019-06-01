@@ -21,8 +21,29 @@
             <el-input size="medium" v-model="classNode.path"></el-input>
           </el-col>
         </el-row>
+        <!--tag-->
+        <el-row :gutter="20" type="flex" justify="start" style="margin-top: 20px" v-for="tag in classNode.tags">
+          <el-col :span="4" :offset="1"><span style="font-size: 16px">{{classNode[tag].desc}}({{classNode[tag].name}}): </span>
+          </el-col>
+          <el-col :span="20">
+            <el-table
+              :data="[classNode[tag].attribute]"
+              border
+              style="width: 100%">
+              <el-table-column
+                v-for="(value,key) in classNode[tag].attribute"
+                :label=key>
+                <template slot-scope="scope">
+                  <el-input v-model="scope.row[key]"></el-input>
+                </template>
+              </el-table-column>
+
+            </el-table>
+          </el-col>
+        </el-row>
         <el-row>
-          <el-button type="primary" size="medium" round style="margin-top: 30px">添加标签</el-button>
+          <el-button type="primary" size="medium" round style="margin-top: 30px"  @click="addTag(0)">添加标签</el-button>
+          <el-button type="danger" size="medium" round style="margin-top: 30px" @click="delTag">删除标签</el-button>
         </el-row>
       </el-collapse-item>
 
@@ -145,30 +166,96 @@
           </el-col>
         </el-row>
         <el-row>
-          <el-button type="primary" size="medium" round style="margin-top: 30px">添加标签</el-button>
-          <el-button type="danger" size="medium" round style="margin-top: 30px">删除标签</el-button>
+          <el-button type="primary" size="medium" round style="margin-top: 30px"  @click="addTag(1)">添加标签</el-button>
+          <el-button type="danger" size="medium" round style="margin-top: 30px" @click="delTag">删除标签</el-button>
         </el-row>
       </el-collapse-item>
     </el-collapse>
 
     <!--to code-->
     <el-button type="primary" size="medium" style="margin-top: 30px">To Code</el-button>
+
+    <!--添加标签弹窗-->
+    <el-dialog
+      title="添加标签"
+      :visible.sync="addTagDialogVisible"
+      width="40%"
+      :before-close="handleClose">
+      <el-select v-model="newTag" style="width: 100%;">
+        <el-option
+          v-for="item in tagList"
+          :key="item.name"
+          :label="item.name"
+          :value="item.name"></el-option>
+      </el-select>
+      <span slot="footer" class="dialog-footer">
+    <el-button @click="addTagDialogVisible = false">取 消</el-button>
+    <el-button type="primary" @click="handleAddTag">确 定</el-button>
+    </span>
+    </el-dialog>
+
+    <!--删除标签弹窗-->
+    <el-dialog
+      title="删除标签"
+      :visible.sync="delTagDialogVisible"
+      width="40%"
+      :before-close="handleClose">
+      <el-select v-model="removeTag" style="width: 100%;">
+        <el-option
+          v-for="item in existTagList"
+          :key="item.name"
+          :label="item.name"
+          :value="item.name"></el-option>
+      </el-select>
+      <span slot="footer" class="dialog-footer">
+    <el-button @click="delTagDialogVisible = false">取 消</el-button>
+    <el-button type="primary" @click="handleDelTag">确 定</el-button>
+    </span>
+    </el-dialog>
   </div>
 
 </template>
 
 <script>
+  import * as RestApi from '../api/RestApi'
+
   export default {
     name: "APIUI",
     data() {
       return {
+        uid: -1,
+        whichDialog: -1, // 0为类, 1为函数
         activeName: "1",
+        addTagDialogVisible: false,
+        delTagDialogVisible: false,
+        newTag: '',
+        removeTag: '',
+        tagList: [],
+        existTagList: [
+          {
+            name: 'Author',
+            desc: '作者',
+            attributes: {
+              name: '作者名称',
+              time: '创建时间 如2019-02-22,'
+            },
+            subTag: []
+          }
+        ],
         classNode: {
           name: 'UserController',
           desc: '用户管理控制器',
           server: '',
           path: 'user',
-          tags: []
+          tags: ['Author'],
+          Author: {
+            desc: '作者',
+            name: 'Author',
+            attribute: {
+              name: '张三',
+              time: '2019-05-20'
+            }
+          },
         },
         methodNodes: [{
           name: 'login',
@@ -233,6 +320,62 @@
           value: '选项5',
           label: 'DELETE'
         }],
+      }
+    },
+    methods: {
+      addTag: function(index) {
+        let _this = this
+        _this.whichDialog = index
+        this.addTagDialogVisible = true
+        RestApi.getAllTag(_this.uid).then(function (response) {
+          for (let bTag of  response.data.data) {
+            console.log(bTag)
+            let fTag = {
+              name: bTag.name,
+              description: bTag.description,
+              attribute: JSON.parse(bTag.attribute),
+              children: JSON.parse(bTag.children)
+            }
+            _this.tagList.push(fTag)
+          }
+        })
+      },
+      delTag: function() {
+        this.delTagDialogVisible = true
+      },
+      handleAddTag: function () {
+        if (this.whichDialog === 0) {
+          this.classNode.tags.push(name)
+        } else if (this.whichDialog === 1) {
+
+        } else {
+          this.$message.error('error')
+        }
+
+
+        this.addTagDialogVisible = false
+        console.log(this.existTagList)
+      },
+      handleDelTag: function() {
+        for (let i=0; i<this.tagList.length; i++)  {
+          if (tag.name === this.newTag) {
+            this.existTagList.splice(i, 1)
+          }
+        }
+        this.delTagDialogVisible = false
+      },
+      handleClose(done) {
+        this.$confirm('确认关闭？')
+          .then(_ => {
+            done();
+          })
+          .catch(_ => {});
+      }
+    },
+    mounted() {
+      let tmp_user = JSON.parse(sessionStorage.getItem("user"))
+      if (tmp_user != null) {
+        this.uid = tmp_user.uid
       }
     }
   }

@@ -2,9 +2,9 @@
   <div>
     <el-row type="flex">
       <el-col :span="6" :offset="8"><h2>文档代码同源导出系统</h2></el-col>
-      <el-col :span="2" :offset="6" style="margin-top: 30px"><span>username</span></el-col>
+      <el-col :span="2" :offset="6" style="margin-top: 30px"><span>{{user.account}}</span></el-col>
       <el-col :span="2">
-        <el-button style="margin-top: 15px" type="primary" round>注销</el-button>
+        <el-button style="margin-top: 15px" type="primary" round @click="logout">注销</el-button>
       </el-col>
     </el-row>
     <el-container id="container">
@@ -14,9 +14,16 @@
         <ul id="treeDemo" class="ztree" style="margin-top: 50px; margin-left: 10px; font-size: 30px"></ul>
         <div id="rMenu" v-if="rMenuShow" v-bind:style="rMenuStyle">
           <ul>
-            <li id="m_add" onclick="handleUpload();">上传</li>
-            <li id="m_del" onclick="handleDownload();">下载</li>
-            <li id="m_check" onclick="handleDelete();">删除</li>
+            <el-upload action="#"
+                       :auto-upload="true"
+                       :http-request="uploadFile"
+                       :show-file-list="false"
+                       style="display: none">
+              <el-button id="btn_file"></el-button>
+            </el-upload>
+            <li id="m_add" @click="handleUpload">上传</li>
+            <li id="m_del" @click="handleDownload">下载</li>
+            <li id="m_check" @click="handleDelete">删除</li>
           </ul>
         </div>
 
@@ -35,7 +42,12 @@
         </el-menu>
         <!--代码文件-->
         <template v-if="activeIndex=== '1'">
-          <CodeFile></CodeFile>
+          <!--<CodeFile v-bind:content="editorContent"></CodeFile>-->
+          <div id="editor">
+          <VueUeditorWrap v-model="editorContent" :config="myConfig"></VueUeditorWrap>
+          <el-button style="margin-top: 20px" type="primary" round @click="saveFile">保存</el-button>
+          <el-button style="margin-top: 20px" type="primary" round>To API</el-button>
+          </div>
         </template>
         <!--API UI-->
         <template v-if="activeIndex=== '2'">
@@ -59,16 +71,27 @@
   import "../../static/ztree/js/jquery.ztree.excheck.min"
   import "../../static/ztree/js/jquery.ztree.exedit.min"
   import "../../static/ztree/css/zTreeStyle.css"
+  import * as RestApi from '../api/RestApi'
+  import * as downloadUtil from '../util/download'
+  import VueUeditorWrap from 'vue-ueditor-wrap'
+  // import '../../static/UEditor/third-party/SyntaxHighlighter/shCoreDefault.css'
+  // import '../../static/UEditor/third-party/SyntaxHighlighter/shCore'
 
   export default {
     components: {
       CodeFile,
       APIUI,
-      TagManage
+      TagManage,
+      VueUeditorWrap
     },
     name: "Home",
     data() {
       return {
+        user: {
+          uid: -1,
+          account: '未登录'
+        },
+        editorContent: "111",
         activeIndex: '1',
         rMenuShow: false,
         rMenuStyle: {
@@ -80,22 +103,49 @@
           view: {
             dblClickExpand: false
           },
-          check: {
-            enable: true
-          },
           callback: {
-            onRightClick: this.onRightClick
+            onRightClick: this.onRightClick,
+            onClick: this.getFile
           }
         },
+        myConfig: {
+          // 编辑器不自动被内容撑高
+          autoHeightEnabled: false,
+          // 初始容器高度
+          initialFrameHeight: 350,
+          // 初始容器宽度
+          initialFrameWidth: '100%',
+          // 上传文件接口（这个地址是我为了方便各位体验文件上传功能搭建的临时接口，请勿在生产环境使用！！！）
+          serverUrl: 'http://35.201.165.105:8000/controller.php',
+          // UEditor 资源文件的存放路径，如果你使用的是 vue-cli 生成的项目，通常不需要设置该选项，vue-ueditor-wrap 会自动处理常见的情况，如果需要特殊配置，参考下方的常见问题2
+          UEDITOR_HOME_URL: '/static/UEditor/',
+        },
+        // setting : {
+        //   view: {
+        //
+        //     selectedMulti: false
+        //   },
+        //   edit: {
+        //     enable: true,
+        //     editNameSelectAll: true,
+        //
+        //   },
+        //   data: {
+        //     simpleData: {
+        //       enable: true
+        //     }
+        //   },
+        //   callback: {
+        //
+        //   }
+        // },
         zNodes: [
           {
-            id: 1, name: "root",
-            children: [
-              {id: 11, name: "UserController.java"},
-              // {id: 12, name: "节点 1-2"}
-            ]
+            name: "root",
+            children: [],
+            value: ''
           }
-        ]
+        ],
       }
     },
     methods: {
@@ -121,7 +171,7 @@
         this.rMenuStyle.left = x + "px"
         $("body").bind("mousedown", this.onBodyMouseDown);
       },
-      hideRmenu: function() {
+      hideRmenu: function () {
         this.rMenuShow = false
         $("body").unbind("mousedown", this.onBodyMouseDown);
       },
@@ -131,17 +181,107 @@
         }
       },
       handleUpload: function () {
+        document.getElementById("btn_file").click()
+      },
+      uploadFile: function (param) {
+        let _this = this
+        _this.hideRmenu()
+        let zTree = $.fn.zTree.getZTreeObj("treeDemo")
+        let formData = new FormData()
+        formData.append('file', param.file)
+        let params = {
+          uid: _this.user.uid,
+          path: zTree.getSelectedNodes()[0].value
+        }
 
+        RestApi.uploadFile(param.file, params).then(function (response) {
+          if (response.data.code === 0) {
+            let newNode = {
+              name: response.data.data.name,
+              value: response.data.data.value
+            }
+            zTree.addNodes(zTree.getSelectedNodes()[0], newNode)
+            _this.$message.info("上传成功")
+          } else {
+            _this.$message.error(response.data.msg)
+          }
+        })
       },
       handleDownload: function () {
-
+        let _this = this
+        _this.hideRmenu()
+        let zTree = $.fn.zTree.getZTreeObj("treeDemo")
+        let path = zTree.getSelectedNodes()[0].value
+        RestApi.downloadFile(path).then(function (response) {
+          downloadUtil.download(response.data, zTree.getSelectedNodes()[0].name)
+          // if (response.status === 2000) {
+          //   downloadUtil.download(response.data.data)
+          //   _this.$message.info("下载成功")
+          // }else {
+          //   _this.$message.error(response.data.msg)
+          // }
+        })
       },
       handleDelete: function () {
-
+        let _this = this
+        _this.hideRmenu()
+        let zTree = $.fn.zTree.getZTreeObj("treeDemo")
+        let path = zTree.getSelectedNodes()[0].value
+        console.log(path)
+        RestApi.deleteFile(path).then(function (response) {
+          if (response.data.code === 0) {
+            zTree.removeNode(zTree.getSelectedNodes()[0])
+            _this.$message.info("删除成功")
+          }else {
+            _this.$message.error(response.data.msg)
+          }
+        })
+      },
+      logout: function () {
+        sessionStorage.clear()
+        this.$router.push('/login')
+      },
+      getFileTree: function () {
+        let _this = this
+        RestApi.getFileTree(_this.user.uid).then(function (response) {
+          console.log(response)
+          if (response.data.code === 0) {
+            _this.zNodes = [response.data.data]
+          }
+          $.fn.zTree.init($("#treeDemo"), _this.setting, _this.zNodes).expandAll(true)
+        })
+      },
+      getFile: function () {
+        let _this = this
+        let zTree = $.fn.zTree.getZTreeObj("treeDemo")
+        let path = zTree.getSelectedNodes()[0].value
+        RestApi.getFile(path).then(function (response) {
+          if (response.data.code === 0) {
+            _this.editorContent = response.data.data.replace(/\r\n/g,"<br>")
+          }
+        })
+      },
+      saveFile: function () {
+        let _this = this
+        let zTree = $.fn.zTree.getZTreeObj("treeDemo")
+        let path = zTree.getSelectedNodes()[0].value
+        let file = _this.editorContent.replace(/<br\/>/g, "\r\n")
+        let file1 = file.replace(/&nbsp;/g, ' ')
+        RestApi.saveFile(file1, path).then(function (response) {
+          if (response.data.code === 0) {
+            console.log(response)
+          }
+        })
       }
     },
     mounted() {
-      $.fn.zTree.init($("#treeDemo"), this.setting, this.zNodes).expandAll(true)
+      let tmp_user = JSON.parse(sessionStorage.getItem("user"))
+      if (tmp_user != null) {
+        this.user = tmp_user
+      }
+      // 获取文件树
+      this.getFileTree()
+
     }
   }
 </script>
@@ -179,5 +319,6 @@
     width: 80px;
     height: 25px;
   }
+
 
 </style>

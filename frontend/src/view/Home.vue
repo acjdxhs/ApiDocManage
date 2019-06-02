@@ -44,9 +44,9 @@
         <template v-if="activeIndex=== '1'">
           <!--<CodeFile v-bind:content="editorContent"></CodeFile>-->
           <div id="editor">
-          <VueUeditorWrap v-model="editorContent" :config="myConfig"></VueUeditorWrap>
-          <el-button style="margin-top: 20px" type="primary" round @click="saveFile">保存</el-button>
-          <el-button style="margin-top: 20px" type="primary" round>To API</el-button>
+            <VueUeditorWrap v-model="editorContent" :config="myConfig"></VueUeditorWrap>
+            <el-button style="margin-top: 20px" type="primary" round @click="saveFile">保存</el-button>
+            <el-button style="margin-top: 20px" type="primary" round @click="handleToApi">To API</el-button>
           </div>
         </template>
         <!--API UI-->
@@ -91,7 +91,7 @@
           uid: -1,
           account: '未登录'
         },
-        editorContent: "111",
+        editorContent: "",
         activeIndex: '1',
         rMenuShow: false,
         rMenuStyle: {
@@ -120,25 +120,6 @@
           // UEditor 资源文件的存放路径，如果你使用的是 vue-cli 生成的项目，通常不需要设置该选项，vue-ueditor-wrap 会自动处理常见的情况，如果需要特殊配置，参考下方的常见问题2
           UEDITOR_HOME_URL: '/static/UEditor/',
         },
-        // setting : {
-        //   view: {
-        //
-        //     selectedMulti: false
-        //   },
-        //   edit: {
-        //     enable: true,
-        //     editNameSelectAll: true,
-        //
-        //   },
-        //   data: {
-        //     simpleData: {
-        //       enable: true
-        //     }
-        //   },
-        //   callback: {
-        //
-        //   }
-        // },
         zNodes: [
           {
             name: "root",
@@ -172,7 +153,6 @@
         $("body").bind("mousedown", this.onBodyMouseDown);
       },
       hideRmenu: function () {
-        this.rMenuShow = false
         $("body").unbind("mousedown", this.onBodyMouseDown);
       },
       onBodyMouseDown(event) {
@@ -181,9 +161,11 @@
         }
       },
       handleUpload: function () {
+        this.hideRmenu()
         document.getElementById("btn_file").click()
       },
       uploadFile: function (param) {
+        console.log('invoke')
         let _this = this
         _this.hideRmenu()
         let zTree = $.fn.zTree.getZTreeObj("treeDemo")
@@ -253,6 +235,7 @@
       },
       getFile: function () {
         let _this = this
+        _this.activeIndex = '1'
         let zTree = $.fn.zTree.getZTreeObj("treeDemo")
         let path = zTree.getSelectedNodes()[0].value
         RestApi.getFile(path).then(function (response) {
@@ -267,9 +250,28 @@
         let path = zTree.getSelectedNodes()[0].value
         let file = _this.editorContent.replace(/<br\/>/g, "\r\n")
         let file1 = file.replace(/&nbsp;/g, ' ')
-        RestApi.saveFile(file1, path).then(function (response) {
+        let file2 = file1.replace('<p>', '').replace('</p>', '').replace(/&quot;/g, '"')
+        RestApi.saveFile(file2, path).then(function (response) {
           if (response.data.code === 0) {
             console.log(response)
+          }
+        })
+      },
+      handleToApi: function () {
+        let _this = this
+        let zTree = $.fn.zTree.getZTreeObj("treeDemo")
+        let path = zTree.getSelectedNodes()[0].value
+        _this.saveFile()
+        console.log(path)
+        RestApi.toApi(path).then(function (response) {
+          console.log(response)
+          if (response.data.code === 0) {
+            _this.activeIndex = '2'
+            sessionStorage.setItem("api", JSON.stringify(response.data.data))
+            sessionStorage.setItem("path", path)
+            _this.$message.info(response.data.msg)
+          }else{
+            _this.$message.error(response.data.msg)
           }
         })
       }

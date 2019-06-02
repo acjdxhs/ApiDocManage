@@ -1,14 +1,16 @@
 package com.scut.backend.model;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ApiNode {
 
     private String name;
-    private String desc;
-    private Map<String, String> attribute;
-    private List<ApiNode> children;
+    private String desc = "";
+    private Map<String, String> attribute = new HashMap<>();
+    private List<ApiNode> children = new ArrayList<>();
 
     public String getName() {
         return name;

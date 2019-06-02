@@ -23,7 +23,8 @@
         </el-row>
         <!--tag-->
         <el-row :gutter="20" type="flex" justify="start" style="margin-top: 20px" v-for="tag in classNode.tags">
-          <el-col :span="4" :offset="1"><span style="font-size: 16px">{{classNode[tag].desc}}({{classNode[tag].name}}): </span>
+          <el-col :span="4" :offset="1"><span
+            style="font-size: 16px">{{classNode[tag].desc}}({{classNode[tag].name}}): </span>
           </el-col>
           <el-col :span="20">
             <el-table
@@ -42,8 +43,10 @@
           </el-col>
         </el-row>
         <el-row>
-          <el-button type="primary" size="medium" round style="margin-top: 30px"  @click="addTag(0)">添加标签</el-button>
-          <el-button type="danger" size="medium" round style="margin-top: 30px" @click="delTag">删除标签</el-button>
+          <el-button type="primary" size="medium" round style="margin-top: 30px" @click="addTag(classNode.name)">添加标签
+          </el-button>
+          <el-button type="danger" size="medium" round style="margin-top: 30px" @click="delTag(classNode.name)">删除标签
+          </el-button>
         </el-row>
       </el-collapse-item>
 
@@ -110,7 +113,9 @@
         <el-row :gutter="20" type="flex" justify="start" style="margin-top: 20px">
           <el-col :span="4" :offset="1"><span style="font-size: 16px">响应(Responses): </span></el-col>
           <el-col :span="20">
-            返回类型：String
+            返回类型：{{methodNode.responseType.type}}
+            <el-input size="medium" style="width: 400px; margin-left: 10px"
+                      v-model="methodNode.responseType.desc"></el-input>
             <el-table
               :data="methodNode.responses"
               border
@@ -166,8 +171,10 @@
           </el-col>
         </el-row>
         <el-row>
-          <el-button type="primary" size="medium" round style="margin-top: 30px"  @click="addTag(1)">添加标签</el-button>
-          <el-button type="danger" size="medium" round style="margin-top: 30px" @click="delTag">删除标签</el-button>
+          <el-button type="primary" size="medium" round style="margin-top: 30px" @click="addTag(methodNode.name)">添加标签
+          </el-button>
+          <el-button type="danger" size="medium" round style="margin-top: 30px" @click="delTag(methodNode.name)">删除标签
+          </el-button>
         </el-row>
       </el-collapse-item>
     </el-collapse>
@@ -202,10 +209,10 @@
       :before-close="handleClose">
       <el-select v-model="removeTag" style="width: 100%;">
         <el-option
-          v-for="item in existTagList"
-          :key="item.name"
-          :label="item.name"
-          :value="item.name"></el-option>
+          v-for="item in extraTagList"
+          :key="item"
+          :label="item"
+          :value="item"></el-option>
       </el-select>
       <span slot="footer" class="dialog-footer">
     <el-button @click="delTagDialogVisible = false">取 消</el-button>
@@ -224,24 +231,14 @@
     data() {
       return {
         uid: -1,
-        whichDialog: -1, // 0为类, 1为函数
         activeName: "1",
         addTagDialogVisible: false,
         delTagDialogVisible: false,
         newTag: '',
         removeTag: '',
+        selectedNode: '',
         tagList: [],
-        existTagList: [
-          {
-            name: 'Author',
-            desc: '作者',
-            attributes: {
-              name: '作者名称',
-              time: '创建时间 如2019-02-22,'
-            },
-            subTag: []
-          }
-        ],
+        extraTagList: [],
         classNode: {
           name: 'UserController',
           desc: '用户管理控制器',
@@ -257,53 +254,7 @@
             }
           },
         },
-        methodNodes: [{
-          name: 'login',
-          desc: '登录',
-          methodSelector: [],
-          server: '',
-          path: 'login',
-          parameters: [{
-            name: 'user',
-            type: 'User',
-            desc: '用户，包括用户名和密码'
-          }],
-          responseType: '',
-          responses: [{
-            code: 200,
-            content: 'ok'
-          }, {
-            code: 403,
-            content: 'forbidden'
-          }],
-          Author: {
-            desc: '作者',
-            name: 'Author',
-            attribute: {
-              name: '张三',
-              time: '2019-05-20'
-            },
-            tags: []
-          },
-          tags: ['Author']
-        }, {
-          name: 'signUp',
-          desc: '注册',
-          methodSelector: [],
-          server: '',
-          path: 'login',
-          parameters: [{
-            name: 'account',
-            type: 'String',
-            desc: '账户'
-          }],
-          responseType: '',
-          responses: [{
-            code: 200,
-            content: 'ok'
-          }],
-          tag: []
-        }],
+        methodNodes: [],
         options: [{
           value: '选项1',
           label: 'GET'
@@ -323,16 +274,16 @@
       }
     },
     methods: {
-      addTag: function(index) {
+      addTag: function (name) {
         let _this = this
-        _this.whichDialog = index
-        this.addTagDialogVisible = true
+        _this.tagList = []
+        _this.selectedNode = name,
+          this.addTagDialogVisible = true
         RestApi.getAllTag(_this.uid).then(function (response) {
           for (let bTag of  response.data.data) {
-            console.log(bTag)
             let fTag = {
               name: bTag.name,
-              description: bTag.description,
+              desc: bTag.desc,
               attribute: JSON.parse(bTag.attribute),
               children: JSON.parse(bTag.children)
             }
@@ -340,26 +291,48 @@
           }
         })
       },
-      delTag: function() {
-        this.delTagDialogVisible = true
+      delTag: function (name) {
+        this.selectedNode = name,
+          this.delTagDialogVisible = true
+      },
+      findNode: function (name) {
+        if (name === this.classNode.name) {
+          return this.classNode
+        } else {
+          for (let method of this.methodNodes) {
+            if (name === method.name) {
+              return method
+            }
+          }
+        }
+      },
+      findTag: function (name, arr) {
+        for (let tag of arr) {
+          if (name === tag.name) {
+            return tag
+          }
+        }
       },
       handleAddTag: function () {
-        if (this.whichDialog === 0) {
-          this.classNode.tags.push(name)
-        } else if (this.whichDialog === 1) {
-
-        } else {
-          this.$message.error('error')
+        for (let tagName of this.extraTagList) {
+          if (tagName === this.newTag) {
+            this.$message.error('已添加该标签')
+            return
+          }
         }
 
-
+        let node = this.findNode(this.selectedNode)
+        this.$set(node, this.newTag, this.findTag(this.newTag, this.tagList));
+        node.tags.push(this.newTag)
         this.addTagDialogVisible = false
-        console.log(this.existTagList)
+        this.extraTagList = node.tags
       },
-      handleDelTag: function() {
-        for (let i=0; i<this.tagList.length; i++)  {
-          if (tag.name === this.newTag) {
-            this.existTagList.splice(i, 1)
+      handleDelTag: function () {
+        let node = this.findNode(this.selectedNode)
+        for (let i = 0; node.tags.length; i++) {
+          if (node.tags[i] === this.removeTag) {
+            this.$delete(node, this.removeTag)
+            node.tags.splice(i, 1)
           }
         }
         this.delTagDialogVisible = false
@@ -369,7 +342,214 @@
           .then(_ => {
             done();
           })
-          .catch(_ => {});
+          .catch(_ => {
+          });
+      },
+      backToFrontMethod: function (data1) {
+        let methodNodes = []
+        for (let method of data1) {
+          let node = {
+            name: method.name,
+            desc: method.desc,
+            methodSelector: [],
+            server: '',
+            path: '',
+            parameters: [],
+            responseType: {},
+            responses: [],
+            tags: []
+          }
+          for (let child of method.children) {
+            switch (child.name) {
+              case 'Parameters':
+                for (let p of child.children) {
+                  if (p.name === 'Parameter') {
+                    let param = {
+                      name: p.attribute.name,
+                      type: p.attribute.type,
+                      desc: p.attribute.desc
+                    }
+                    node.parameters.push(param)
+                  }
+                }
+                break
+              case 'Responses':
+                node.responseType.type = child.attribute.type
+                node.responseType.desc = child.attribute.desc
+                for (let p of child.children) {
+                  if (p.name === 'Response') {
+                    let param = {
+                      code: p.attribute.code,
+                      content: p.attribute.content,
+                    }
+                    params.push(param)
+                  }
+                }
+                break
+              case 'Server':
+                node.server = child.attribute.uri
+                break
+              case 'Path':
+                node.pat = child.attribute.path
+                break
+              case 'Method':
+                node.methodSelector = child.attribute.method.split(',')
+                break
+              default:
+                let n = {
+                  name: child.name,
+                  desc: child.desc,
+                  attribute: child.attribute,
+                  tags: []
+                }
+                this.$set(node, child.name, n);
+                node.tags.push(child.name)
+            }
+          }
+          methodNodes.push(node)
+        }
+        return methodNodes
+      },
+      backToFrontClass:function(data1) {
+        let node = {
+          name: data1.name,
+          desc: data1.desc,
+          server: '',
+          path: '',
+          tags: []
+        }
+        for (let child of data1.children) {
+          switch (child.name) {
+            case 'Server':
+              node.server = child.attribute.uri
+              break
+            case 'Path':
+              node.pat = child.attribute.path
+              break
+            default:
+              let n = {
+                name: child.name,
+                desc: child.desc,
+                attribute: child.attribute,
+                tags: []
+              }
+          }
+        }
+      },
+      frontToBackMethod: function (data1) {
+        let apiNode = []
+        for (let tag of this.tagList) {
+          // let node = {
+          //   name: method.name,
+          //   desc: '',
+          //   methodSelector: [],
+          //   server: '',
+          //   path: 'login',
+          //   parameters: [],
+          //   responseType: '',
+          //   responses: [],
+          // }
+          let node = []
+          node.name = tag.name
+          node.desc = desc
+          node.children = []
+
+          for (let key in tag) {
+            switch (key) {
+              case 'parameters':
+                let params = {
+                  name: 'Parameters',
+                  desc: '参数',
+                  children: []
+                }
+                node.children.push(params)
+                for (let p of this.tagList.parameters) {
+                  let param = {
+                    name: 'Parameter',
+                    desc: '',
+                    attribute: {
+                      name: p.name,
+                      type: p.type,
+                      desc: p.desc
+                    },
+                    children: []
+                  }
+                  params.push(param)
+                }
+                break
+              case 'responses':
+                let responses = {
+                  name: 'Responses',
+                  desc: '响应',
+                  attribute: {
+                    type: this.tagList.responseType.type,
+                    desc: this.tagList.responseType.desc
+                  },
+                  children: []
+                }
+                node.children.push(responses)
+                for (let p of this.tagList.responses) {
+                  let response = {
+                    name: 'Response',
+                    desc: '',
+                    attribute: {
+                      code: p.code,
+                      content: p.content
+                    },
+                    children: []
+                  }
+                  responses.push(response)
+                }
+                break
+              case 'server':
+                let server = {
+                  name: 'Server',
+                  desc: '服务器',
+                  attribute: {
+                    uri: this.tagList.server
+                  },
+                  children: []
+                }
+                node.children.push(server)
+                break
+              case 'path':
+                let path = {
+                  name: 'Path',
+                  desc: '路径',
+                  attribute: {
+                    path: this.tagList.path
+                  },
+                  children: []
+                }
+                node.children.push(path)
+                break
+              case 'methodSelector':
+                let methods = {
+                  name: 'Method',
+                  desc: '方法',
+                  attribute: {
+                    method: this.tagList.methodSelector.join(',')
+                  },
+                  children: []
+                }
+                node.children.push(methods)
+                break
+              case 'tags':
+                break
+              default:
+                let tag = {
+                  name: this.tagList.key.name,
+                  desc: this.tagList.key.name.desc,
+                  attribute: this.tagList.key.name.attribute,
+                  tags: []
+                }
+                node.children.push(tag)
+            }
+          }
+          apiNode.push(node)
+        }
+        console.log(apiNode)
+        return apiNode
       }
     },
     mounted() {
@@ -377,10 +557,22 @@
       if (tmp_user != null) {
         this.uid = tmp_user.uid
       }
+
+      let apiData = JSON.parse(sessionStorage.getItem("api"))
+      if (apiData !== null) {
+        this.methodNodes = this.backToFrontMethod(apiData.methodNodes)
+        this.classNode = this.backToFrontMethod([apiData.classNode])[0]
+        console.log(this.classNode)
+      }
+    },
+    watch: {
+      selectedNode(val) {
+        console.log(val)
+        this.extraTagList = this.findNode(val).tags
+      }
     }
   }
 </script>
 
 <style scoped>
-
 </style>

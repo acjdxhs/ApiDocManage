@@ -154,3 +154,18 @@ export const addTag = (params) => {
     }
   })
 }
+
+// to Api
+export const toApi = (path) => {
+  let form = new FormData()
+  form.append("path", path)
+  return axios({
+    method: 'post',
+    url: baseUrl + '/core/toApi',
+    data: form,
+    headers: {
+      "Content-Type": "multipart/form-data",
+      "Access-Token": sessionStorage.getItem('token')
+    }
+  })
+}

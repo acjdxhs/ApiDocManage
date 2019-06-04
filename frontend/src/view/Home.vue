@@ -240,8 +240,11 @@
         let path = zTree.getSelectedNodes()[0].value
         RestApi.getFile(path).then(function (response) {
           if (response.data.code === 0) {
-            _this.editorContent = response.data.data.replace(/\r\n/g,"<br>")
-            _this.editorContent = response.data.data.replace(/\n/g,"<br>")
+            // _this.editorContent = response.data.data.replace(/\r\n/g,"<br>")
+            // _this.editorContent = response.data.data.replace(/\n/g,"<br>")
+            let a = response.data.data.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            console.log(a)
+            _this.editorContent = "<pre><Code>" + a +"</Code></pre>"
           }
         })
       },
@@ -249,10 +252,11 @@
         let _this = this
         let zTree = $.fn.zTree.getZTreeObj("treeDemo")
         let path = zTree.getSelectedNodes()[0].value
-        let file = _this.editorContent.replace(/<br\/>/g, "\r\n")
-        let file1 = file.replace(/&nbsp;/g, ' ')
-        let file2 = file1.replace('<p>', '').replace(/&quot;/g, '"')
-        file2 = file2.substring(0, file2.lastIndexOf('</p>'))
+        let file = _this.editorContent.replace(/<br\/>/g, "\r\n").replace(/&nbsp;/g, ' ')
+          .replace('<pre>', '').replace(/&quot;/g, '"')
+
+        let file1 = file.substring(0, file.lastIndexOf('</pre>'))
+        let file2 = file1.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         RestApi.saveFile(file2, path).then(function (response) {
           if (response.data.code === 0) {
             console.log(response)

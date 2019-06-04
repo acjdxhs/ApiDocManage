@@ -66,6 +66,7 @@ public class TagService {
             int result = tagMapper.updateTag(tag);
             return ResultUtil.returnGoodResult(result);
         }catch (Exception e) {
+            e.printStackTrace();
             return ResultUtil.returnBadResult("更新标签异常");
         }
     }

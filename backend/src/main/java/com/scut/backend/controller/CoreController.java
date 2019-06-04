@@ -1,5 +1,7 @@
 package com.scut.backend.controller;
 
+import com.alibaba.fastjson.JSONObject;
+import com.scut.backend.model.ApiNodeResult;
 import com.scut.backend.model.Result;
 import com.scut.backend.service.CoreService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +17,10 @@ public class CoreController {
     @Autowired
     private CoreService coreService;
 
-    @RequestMapping("toCode")
-    public Result toCode() {
-        return coreService.toCode();
+    @PostMapping("toCode")
+    public Result toCode(@RequestParam String path, @RequestParam String apiNode) {
+        ApiNodeResult res = JSONObject.parseObject(apiNode, ApiNodeResult.class);
+        return coreService.toCode(path, res);
     }
 
     @PostMapping("toApi")

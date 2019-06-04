@@ -6,7 +6,7 @@
                        width="180px"
       >
       </el-table-column>
-      <el-table-column prop="description"
+      <el-table-column prop="desc"
                        label="标签说明"
                        width="180px"
       >
@@ -53,7 +53,7 @@
           <el-input size="medium" v-model="newTag.name"></el-input>
         </el-form-item>
         <el-form-item label="标签描述">
-          <el-input size="medium" v-model="newTag.description"></el-input>
+          <el-input size="medium" v-model="newTag.desc"></el-input>
         </el-form-item>
         <el-form-item label="标签属性">
           <li v-for="(key, value) in newTag.attribute">
@@ -69,7 +69,7 @@
           <el-input size="mini" v-model="attrEntry.key" style="width: 100px"></el-input>
           属性描述:
           <el-input size="mini" v-model="attrEntry.value" style="width: 100px"></el-input>
-          <el-button type="primary" size="mini" round @click="handleAddAttrebute">添加</el-button>
+          <el-button type="primary" size="mini" round @click="handleAddAttribute">添加</el-button>
         </el-form-item>
         <el-form-item size="medium" label="子标签">
           <el-select multiple v-model="newTag.children" style="width: 100%;">
@@ -102,7 +102,7 @@
         dialogTitle: "",
         newTag: {
           name: '',
-          description: '',
+          desc: '',
           attribute: {},
           children: []
         },
@@ -113,12 +113,12 @@
       }
     },
     methods: {
-      openDialog: function() {
+      openDialog: function () {
         let _this = this
         _this.dialogVisible = true
         _this.dialogTitle = '新增标签'
         _this.newTag.name = ''
-        _this.newTag.description = ''
+        _this.newTag.desc = ''
         _this.newTag.attribute = {}
         _this.newTag.children = []
         _this.attrEntry = {}
@@ -128,7 +128,7 @@
         _this.dialogVisible = true
         _this.dialogTitle = '编辑标签'
         _this.newTag.name = row.name
-        _this.newTag.description = row.description
+        _this.newTag.desc = row.desc
         _this.newTag.attribute = row.attribute
         _this.newTag.children = row.children
       },
@@ -152,7 +152,7 @@
           this.handleAddTag()
         } else if (this.dialogTitle === '编辑标签') {
           this.handleUpdateTag()
-        }else{
+        } else {
           return
         }
       },
@@ -162,7 +162,7 @@
         let params = {
           uid: _this.uid,
           name: _this.newTag.name,
-          description: _this.newTag.description,
+          desc: _this.newTag.desc,
           attribute: JSON.stringify(_this.newTag.attribute),
           children: JSON.stringify(_this.newTag.children)
         }
@@ -171,7 +171,7 @@
             let tag = {
               uid: _this.uid,
               name: _this.newTag.name,
-              description: _this.newTag.description,
+              desc: _this.newTag.desc,
               attribute: _this.newTag.attribute,
               children: _this.newTag.children
             }
@@ -188,21 +188,24 @@
         let params = {
           uid: _this.uid,
           name: _this.newTag.name,
-          description: _this.newTag.description,
+          desc: _this.newTag.desc,
           attribute: JSON.stringify(_this.newTag.attribute),
           children: JSON.stringify(_this.newTag.children)
         }
+        console.log(params)
         RestApi.updateTag(params).then(function (response) {
           if (response.data.code === 0) {
-            let tag = {
-              uid: _this.uid,
-              name: _this.newTag.name,
-              description: _this.newTag.description,
-              attribute: _this.newTag.attribute,
-              children: _this.newTag.children
-            }
-            _this.tagList.push(tag)
-            _this.$message.info('修改成功')
+            // let oldTag = _this.findTag(_this.newTag.name, _this.tagList)
+            //
+            // oldTag.uid = _this.uid
+            // oldTag.name = _this.newTag.name
+            // oldTag.desc = _this.newTag.desc
+            // oldTag.attribute = _this.newTag.attribute
+            // oldTag.children = _this.newTag.children
+
+            // //_this.tagList.push(oldTag)
+             _this.$message.info('修改成功')
+            _this.getAllTag()
           } else {
             _this.$message.error(response.data.msg)
           }
@@ -216,7 +219,7 @@
           .catch(_ => {
           });
       },
-      handleAddAttrebute() {
+      handleAddAttribute() {
         this.newTag.attribute[this.attrEntry.key] = this.attrEntry.value
         this.attrEntry.key = ''
         this.attrEntry.value = ''
@@ -230,21 +233,23 @@
       },
       getAllTag() {
         let _this = this
-        RestApi.getAllTag(_this.uid).then(function (response) {
-          console.log(response)
-          if (response.data.code === 0) {
-            for (let bTag of  response.data.data) {
-              console.log(bTag)
-              let fTag = {
-                name: bTag.name,
-                description: bTag.description,
-                attribute: JSON.parse(bTag.attribute),
-                children: JSON.parse(bTag.children)
+        _this.tagList = [],
+          RestApi.getAllTag(_this.uid).then(function (response) {
+            console.log(response)
+            if (response.data.code === 0) {
+              console.log(response.data.data)
+              for (let bTag of  response.data.data) {
+                console.log(bTag)
+                let fTag = {
+                  name: bTag.name,
+                  desc: bTag.desc,
+                  attribute: JSON.parse(bTag.attribute),
+                  children: JSON.parse(bTag.children)
+                }
+                _this.tagList.push(fTag)
               }
-              _this.tagList.push(fTag)
             }
-          }
-        })
+          })
       }
     },
     mounted() {

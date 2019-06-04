@@ -3,8 +3,8 @@ package com.scut.backend.model;
 public class Tag {
 
     private Integer uid;
-    private String name;
-    private String description;
+    private String name = "";
+    private String desc = "";
     private String attribute;
     private String children;
 
@@ -24,12 +24,12 @@ public class Tag {
         this.name = name;
     }
 
-    public String getDescription() {
-        return description;
+    public String getDesc() {
+        return desc;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setDesc(String desc) {
+        this.desc = desc;
     }
 
     public String getAttribute() {

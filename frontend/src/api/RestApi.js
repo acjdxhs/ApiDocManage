@@ -169,3 +169,20 @@ export const toApi = (path) => {
     }
   })
 }
+
+// to Code
+export const toCode = (path, apiNode) => {
+  console.log(path, apiNode)
+  let form = new FormData()
+  form.append("path", path)
+  form.append("apiNode", JSON.stringify(apiNode))
+  return axios({
+    method: 'post',
+    url: baseUrl + '/core/toCode',
+    data: form,
+    headers: {
+      "Content-Type": "multipart/form-data",
+      "Access-Token": sessionStorage.getItem('token')
+    }
+  })
+}

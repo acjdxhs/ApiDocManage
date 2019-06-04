@@ -3,8 +3,12 @@ package com.scut.backend.uits;
 import com.scut.backend.model.ApiNode;
 import org.dom4j.*;
 import org.dom4j.dom.DOMElement;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.XMLWriter;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -62,7 +66,21 @@ public class XmlUtil {
     public static String apiNodeToXml(ApiNode root) {
         Element element = DocumentHelper.createElement(root.getName());
         apiNodeToXmlHelper(root, element);
-        return element.asXML();
+        OutputFormat format = new OutputFormat();
+        format.setEncoding("UTF-8");
+        format.setNewlines(true);
+        format.setIndent("    ");
+        StringWriter stringWriter = new StringWriter();
+        XMLWriter writer = new XMLWriter(stringWriter, format);
+        try {
+            writer.write(element);
+            writer.flush();
+            writer.close();
+            return stringWriter.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public static void apiNodeToXmlHelper(ApiNode root, Element element) {

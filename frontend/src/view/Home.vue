@@ -153,6 +153,7 @@
         $("body").bind("mousedown", this.onBodyMouseDown);
       },
       hideRmenu: function () {
+        this.rMenuShow = false
         $("body").unbind("mousedown", this.onBodyMouseDown);
       },
       onBodyMouseDown(event) {
@@ -161,11 +162,9 @@
         }
       },
       handleUpload: function () {
-        this.hideRmenu()
         document.getElementById("btn_file").click()
       },
       uploadFile: function (param) {
-        console.log('invoke')
         let _this = this
         _this.hideRmenu()
         let zTree = $.fn.zTree.getZTreeObj("treeDemo")
@@ -175,6 +174,7 @@
           uid: _this.user.uid,
           path: zTree.getSelectedNodes()[0].value
         }
+        console.log(params)
 
         RestApi.uploadFile(param.file, params).then(function (response) {
           if (response.data.code === 0) {
@@ -241,6 +241,7 @@
         RestApi.getFile(path).then(function (response) {
           if (response.data.code === 0) {
             _this.editorContent = response.data.data.replace(/\r\n/g,"<br>")
+            _this.editorContent = response.data.data.replace(/\n/g,"<br>")
           }
         })
       },
@@ -250,7 +251,8 @@
         let path = zTree.getSelectedNodes()[0].value
         let file = _this.editorContent.replace(/<br\/>/g, "\r\n")
         let file1 = file.replace(/&nbsp;/g, ' ')
-        let file2 = file1.replace('<p>', '').replace('</p>', '').replace(/&quot;/g, '"')
+        let file2 = file1.replace('<p>', '').replace(/&quot;/g, '"')
+        file2 = file2.substring(0, file2.lastIndexOf('</p>'))
         RestApi.saveFile(file2, path).then(function (response) {
           if (response.data.code === 0) {
             console.log(response)

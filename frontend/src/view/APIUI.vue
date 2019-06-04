@@ -4,9 +4,11 @@
       <!--类-->
       <el-collapse-item name="1">
         <template slot="title">
-          <div style="background-color: #00B83F; width: 100%; text-align: left">
-            <span style="margin-left: 10px">{{classNode.name}}:</span>
-            <el-input size="medium" style="width: 600px; margin-left: 10px" v-model="classNode.desc"></el-input>
+          <div style="background-color: rgba(94,255,22,0.12); width: 100%; text-align: left">
+            <el-col :span="3"><span style="margin-left: 10px">{{classNode.name}}:</span></el-col>
+            <el-col :span="12">
+              <el-input size="medium" style="width: 600px; margin-left: 10px" v-model="classNode.desc"></el-input>
+            </el-col>
           </div>
         </template>
         <el-row :gutter="20" type="flex" style="margin-top: 20px">
@@ -55,8 +57,11 @@
         <!--标题-->
         <template slot="title">
           <div style="background-color: #F0F0EE; width: 100%; text-align: left">
-            <span style="margin-left: 10px">{{methodNode.name}}:</span>
-            <el-input size="medium" style="width: 400px; margin-left: 10px" v-model="methodNode.desc"></el-input>
+            <el-col :span="3"><span style="margin-left: 10px">{{methodNode.name}}:</span>
+            </el-col>
+            <el-col :span="12">
+              <el-input size="medium" style="width: 100%; margin-left: 10px" v-model="methodNode.desc"></el-input>
+            </el-col>
             <el-select size="medium" multiple collapse-tags style="width: 180px; float: right"
                        v-model="methodNode.methodSelector">
               <el-option
@@ -180,7 +185,7 @@
     </el-collapse>
 
     <!--to code-->
-    <el-button type="primary" size="medium" style="margin-top: 30px">To Code</el-button>
+    <el-button type="primary" size="medium" style="margin-top: 30px" @click="handleToCode">To Code</el-button>
 
     <!--添加标签弹窗-->
     <el-dialog
@@ -239,21 +244,7 @@
         selectedNode: '',
         tagList: [],
         extraTagList: [],
-        classNode: {
-          name: 'UserController',
-          desc: '用户管理控制器',
-          server: '',
-          path: 'user',
-          tags: ['Author'],
-          Author: {
-            desc: '作者',
-            name: 'Author',
-            attribute: {
-              name: '张三',
-              time: '2019-05-20'
-            }
-          },
-        },
+        classNode: {},
         methodNodes: [],
         options: [{
           value: '选项1',
@@ -274,11 +265,9 @@
       }
     },
     methods: {
-      addTag: function (name) {
+      initTagList: function() {
         let _this = this
         _this.tagList = []
-        _this.selectedNode = name,
-          this.addTagDialogVisible = true
         RestApi.getAllTag(_this.uid).then(function (response) {
           for (let bTag of  response.data.data) {
             let fTag = {
@@ -290,6 +279,11 @@
             _this.tagList.push(fTag)
           }
         })
+      },
+      addTag: function (name) {
+        this.addTagDialogVisible = true
+        this.selectedNode = name
+        this.initTagList()
       },
       delTag: function (name) {
         this.selectedNode = name,
@@ -307,7 +301,9 @@
         }
       },
       findTag: function (name, arr) {
+        console.log(name,arr)
         for (let tag of arr) {
+          console.log(tag)
           if (name === tag.name) {
             return tag
           }
@@ -390,7 +386,7 @@
                 node.server = child.attribute.uri
                 break
               case 'Path':
-                node.pat = child.attribute.path
+                node.path = child.attribute.path
                 break
               case 'Method':
                 node.methodSelector = child.attribute.method.split(',')
@@ -410,7 +406,7 @@
         }
         return methodNodes
       },
-      backToFrontClass:function(data1) {
+      backToFrontClass: function (data1) {
         let node = {
           name: data1.name,
           desc: data1.desc,
@@ -424,46 +420,43 @@
               node.server = child.attribute.uri
               break
             case 'Path':
-              node.pat = child.attribute.path
+              node.path = child.attribute.path
               break
             default:
+              console.log(child.name)
               let n = {
                 name: child.name,
                 desc: child.desc,
                 attribute: child.attribute,
                 tags: []
               }
+              this.$set(node, child.name, n);
+              node.tags.push(child.name)
           }
         }
+        return node
       },
       frontToBackMethod: function (data1) {
-        let apiNode = []
-        for (let tag of this.tagList) {
-          // let node = {
-          //   name: method.name,
-          //   desc: '',
-          //   methodSelector: [],
-          //   server: '',
-          //   path: 'login',
-          //   parameters: [],
-          //   responseType: '',
-          //   responses: [],
-          // }
-          let node = []
-          node.name = tag.name
-          node.desc = desc
-          node.children = []
+        let methodApiNode = []
+        for (let method of data1) {
+          let node = {
+            name: method.name,
+            desc: method.desc,
+            attribute: {},
+            children: []
+          }
 
-          for (let key in tag) {
+          for (let key in method) {
             switch (key) {
               case 'parameters':
                 let params = {
                   name: 'Parameters',
                   desc: '参数',
+                  attribute: {},
                   children: []
                 }
                 node.children.push(params)
-                for (let p of this.tagList.parameters) {
+                for (let p of method.parameters) {
                   let param = {
                     name: 'Parameter',
                     desc: '',
@@ -474,7 +467,7 @@
                     },
                     children: []
                   }
-                  params.push(param)
+                  params.children.push(param)
                 }
                 break
               case 'responses':
@@ -482,13 +475,13 @@
                   name: 'Responses',
                   desc: '响应',
                   attribute: {
-                    type: this.tagList.responseType.type,
-                    desc: this.tagList.responseType.desc
+                    type: method.responseType.type,
+                    desc: method.responseType.desc
                   },
                   children: []
                 }
                 node.children.push(responses)
-                for (let p of this.tagList.responses) {
+                for (let p of method.responses) {
                   let response = {
                     name: 'Response',
                     desc: '',
@@ -506,7 +499,7 @@
                   name: 'Server',
                   desc: '服务器',
                   attribute: {
-                    uri: this.tagList.server
+                    uri: method.server
                   },
                   children: []
                 }
@@ -517,7 +510,7 @@
                   name: 'Path',
                   desc: '路径',
                   attribute: {
-                    path: this.tagList.path
+                    path: method.path
                   },
                   children: []
                 }
@@ -528,28 +521,103 @@
                   name: 'Method',
                   desc: '方法',
                   attribute: {
-                    method: this.tagList.methodSelector.join(',')
+                    method: method.methodSelector.join(',')
                   },
                   children: []
                 }
                 node.children.push(methods)
                 break
               case 'tags':
+              case 'name':
+              case 'desc':
+              case 'responseType':
                 break
               default:
+                let tagNode = this.findTag(key, this.tagList)
+                console.log(tagNode)
+                console.log(key)
                 let tag = {
-                  name: this.tagList.key.name,
-                  desc: this.tagList.key.name.desc,
-                  attribute: this.tagList.key.name.attribute,
+                  name: tagNode.name,
+                  desc: tagNode.desc,
+                  attribute: tagNode.attribute,
                   tags: []
                 }
                 node.children.push(tag)
             }
           }
-          apiNode.push(node)
+          methodApiNode.push(node)
         }
-        console.log(apiNode)
-        return apiNode
+        console.log(methodApiNode)
+        return methodApiNode
+      },
+      frontToBackClass: function (data1) {
+        let node = {
+          name: data1.name,
+          desc: data1.desc,
+          attribute: {},
+          children: []
+        }
+
+        for (let key in data1) {
+          switch (key) {
+            case 'server':
+              let server = {
+                name: 'Server',
+                desc: '服务器',
+                attribute: {
+                  uri: data1.server
+                },
+                children: []
+              }
+              node.children.push(server)
+              break
+            case 'path':
+              let path = {
+                name: 'Path',
+                desc: '路径',
+                attribute: {
+                  path: data1.path
+                },
+                children: []
+              }
+              node.children.push(path)
+              break
+            case 'tags':
+            case 'name':
+            case 'desc':
+              break
+            default:
+              console.log(key)
+              console.log(this.tagList)
+              let tagNode = this.findTag(key, this.tagList)
+
+              let tag = {
+                name: tagNode.name,
+                desc: tagNode.desc,
+                attribute: tagNode.attribute,
+                tags: []
+              }
+              node.children.push(tag)
+          }
+        }
+        console.log(node)
+        return node
+      },
+      handleToCode: function () {
+        let _this = this
+        _this.initTagList()
+        let apiNode = {
+            classNode: _this.frontToBackClass(this.classNode),
+            methodNodes: _this.frontToBackMethod(this.methodNodes)
+          }
+
+        RestApi.toCode(sessionStorage.getItem("path"), apiNode).then(function (response) {
+          if (response.data.code === 0) {
+            _this.$message.info("To Code 成功")
+          } else {
+            _this.$message.error(response.data.msg)
+          }
+        })
       }
     },
     mounted() {
@@ -561,8 +629,8 @@
       let apiData = JSON.parse(sessionStorage.getItem("api"))
       if (apiData !== null) {
         this.methodNodes = this.backToFrontMethod(apiData.methodNodes)
-        this.classNode = this.backToFrontMethod([apiData.classNode])[0]
-        console.log(this.classNode)
+        this.classNode = this.backToFrontClass(apiData.classNode)
+        console.log(this.methodNodes)
       }
     },
     watch: {

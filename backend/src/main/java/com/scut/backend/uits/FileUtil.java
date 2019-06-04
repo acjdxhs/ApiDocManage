@@ -127,7 +127,7 @@ public class FileUtil {
         FileTree fileTree = new FileTree();
         fileTree.setChildren(new ArrayList<>());
         getFileTreeHelper(targetFile, fileTree);
-        return fileTree.getChildren().get(0);
+        return fileTree.getChildren().size() < 1 ? null : fileTree.getChildren().get(0);
     }
 
     /**

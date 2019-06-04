@@ -8,6 +8,7 @@ import com.scut.backend.uits.ResultUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,6 +52,12 @@ public class UserService {
         }
         try{
             int result = userMapper.insertUser(user);
+            User user1 = userMapper.getUserByAccount(user.getAccount());
+            // 创建目录
+            File parent =  new File("F:\\graduate\\code\\ApiDocManage\\backend\\upload\\" + user1.getUid());
+            parent.mkdir();
+            File children =  new File("F:\\graduate\\code\\ApiDocManage\\backend\\upload\\" + user1.getUid() + "\\root");
+            children.mkdir();
             return ResultUtil.returnGoodResult(result);
         }catch (Exception e) {
             return ResultUtil.returnBadResult("注册失败");
